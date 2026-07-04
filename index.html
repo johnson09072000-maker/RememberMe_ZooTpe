@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RememberMe｜多物種 3D 保育互動 PoC</title>
+    <style>
+        :root {
+            --forest: #1f4d38;
+            --forest2: #2e6b4d;
+            --leaf: #78a870;
+            --sand: #f5efe2;
+            --cream: #fffaf0;
+            --soil: #6b513c;
+            --ink: #26342d;
+            --muted: #617067;
+            --gold: #d7a84a;
+            --line: #e7dcc8;
+            --shadow: 0 18px 45px rgba(31,77,56,.14);
+            --radius: 24px;
+            --animal-body: #333;
+            --animal-belly: #fff;
+            --animal-head: #333;
+            --animal-accent: #fff;
+        }
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { 
+            margin: 0; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif; 
+            color: var(--ink); 
+            background: linear-gradient(180deg, var(--cream), var(--sand)); 
+            line-height: 1.65; 
+        }
+        .phone-shell { width: min(100%, 460px); margin: 0 auto; min-height: 100vh; background: rgba(255,250,240,.82); overflow: hidden; box-shadow: 0 0 0 1px rgba(31,77,56,.06); }
+        .topbar { position: sticky; top: 0; z-index: 20; backdrop-filter: blur(10px); background: rgba(255,250,240,.9); border-bottom: 1px solid rgba(230,220,200,.8); padding: 10px 18px; display: flex; justify-content: space-between; align-items: center; }
+        .brand { display: flex; gap: 9px; align-items: center; font-weight: 800; color: var(--forest); font-size: 14px; }
+        .brand-mark { width: 28px; height: 28px; border-radius: 10px; background: linear-gradient(135deg, var(--forest), var(--leaf)); display: grid; place-items: center; color: #fff; font-size: 15px; }
+        .top-pill { font-size: 11px; color: var(--soil); background: #fff4d5; border: 1px solid #efd99a; border-radius: 999px; padding: 5px 9px; }
+        section { padding: 28px 18px; }
+        .hero { padding: 34px 18px 24px; background: radial-gradient(circle at 84% 10%, rgba(124,161,116,.18), transparent 26%), radial-gradient(circle at 14% 84%, rgba(215,168,74,.16), transparent 28%); }
+        .eyebrow { display: inline-flex; align-items: center; gap: 7px; border: 1px solid rgba(31,77,56,.16); color: var(--forest); background: rgba(255,255,255,.66); padding: 7px 11px; border-radius: 999px; font-size: 12px; font-weight: 800; }
+        h1 { margin: 18px 0 12px; font-size: 34px; line-height: 1.08; letter-spacing: -1.1px; color: var(--forest); }
+        .subtitle { margin: 0; color: #47584d; font-size: 16px; }
+        .animal-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 18px 0 0; }
+        .animal-tab { border: 1px solid rgba(31,77,56,.12); background: #fff; color: var(--forest); border-radius: 12px; padding: 8px 4px; font-size: 13px; font-weight: 900; cursor: pointer; box-shadow: 0 4px 10px rgba(31,77,56,.04); text-align: center; }
+        .animal-tab.active { background: linear-gradient(135deg, var(--forest), var(--forest2)); color: #fff; }
+        .hero-card { margin-top: 18px; border-radius: 30px; background: linear-gradient(160deg, #fffdf5, #eef5e8); border: 1px solid rgba(31,77,56,.12); box-shadow: var(--shadow); overflow: hidden; }
+        .scene { min-height: 410px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; background: radial-gradient(circle at 50% 0%, rgba(215,168,74,.15), transparent 35%); }
+        .scene-status { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+        .status-badge { background: rgba(31,77,56,.92); color: #fff; border-radius: 16px; padding: 7px 10px; font-size: 12px; font-weight: 800; max-width: 195px; }
+        .model-note { background: rgba(255,255,255,.8); color: var(--soil); border: 1px solid rgba(107,81,60,.12); border-radius: 16px; padding: 7px 9px; font-size: 11px; max-width: 160px; text-align: right; }
+        .stage-wrap { height: 230px; display: grid; place-items: center; perspective: 760px; touch-action: none; user-select: none; }
+        .stage { width: 300px; height: 210px; position: relative; transform-style: preserve-3d; transform: rotateX(var(--rx,-10deg)) rotateY(var(--ry,18deg)) scale(var(--scale,1)); transition: transform .18s ease; }
+        .ground { position: absolute; left: 42px; right: 42px; bottom: 28px; height: 24px; border-radius: 50%; background: rgba(31,77,56,.13); filter: blur(3px); transform: translateZ(-80px) rotateX(76deg); }
+        .part { position: absolute; transform-style: preserve-3d; box-shadow: inset -10px -12px 0 rgba(0,0,0,.13), 0 12px 18px rgba(31,77,56,.10); }
+        .body { left: 72px; top: 82px; width: 158px; height: 80px; border-radius: 50%; background: var(--animal-body); transform: translateZ(0); }
+        .belly { left: 112px; top: 118px; width: 54px; height: 38px; border-radius: 50%; background: var(--animal-belly); opacity: .95; transform: translateZ(16px); }
+        .head { left: 206px; top: 72px; width: 72px; height: 60px; border-radius: 48% 52% 50% 50%; background: var(--animal-head); transform: translateZ(26px); }
+        .ear { width: 34px; height: 34px; border-radius: 50%; background: var(--animal-head); top: 52px; transform: translateZ(15px); }
+        .ear.l { left: 206px; }.ear.r { left: 246px; }
+        .leg { width: 30px; height: 54px; border-radius: 18px; background: var(--animal-body); top: 136px; }
+        .leg.l1 { left: 96px; }.leg.l2 { left: 190px; }.leg.l3 { left: 128px; opacity: .75; }.leg.l4 { left: 220px; opacity: .75; }
+        .tail { left: 50px; top: 115px; width: 42px; height: 18px; border-radius: 999px; background: var(--animal-body); transform: rotate(-18deg) translateZ(-8px); }
+        .nose { left: 256px; top: 98px; width: 32px; height: 23px; border-radius: 50%; background: #2c2520; transform: translateZ(35px); }
+        .eye { width: 6px; height: 6px; background: #111; border-radius: 50%; top: 90px; transform: translateZ(42px); }
+        .eye.l { left: 235px; }.eye.r { left: 261px; }
+        .mark { display: none; }
+        .trunk, .tusk, .muzzle, .branch { display: none; }
+        
+        /* 狀態動畫定義 */
+        .state-stand .body { top: 66px; transform: translateZ(0) rotate(-8deg); }
+        .state-stand .head { top: 48px; }
+        .state-stand .leg { top: 126px; height: 66px; }
+        .state-rest .body { top: 112px; height: 58px; }
+        .state-rest .head { top: 106px; }
+        .state-rest .leg { top: 154px; height: 34px; }
+        .state-rest .tail { top: 135px; }
+        .state-walk .body { animation: bob 1.2s infinite ease-in-out; }
+        .state-walk .leg.l1, .state-walk .leg.l4 { animation: stepA .7s infinite ease-in-out; }
+        .state-walk .leg.l2, .state-walk .leg.l3 { animation: stepB .7s infinite ease-in-out; }
+        @keyframes bob { 50% { transform: translateY(-5px) translateZ(0); } }
+        @keyframes stepA { 50% { transform: rotate(7deg) translateY(-2px); } }
+        @keyframes stepB { 50% { transform: rotate(-7deg) translateY(2px); } }
+
+        /* 臺灣黑熊 樣式 */
+        .animal-bear { --animal-body: #222522; --animal-head: #202320; --animal-belly: #f4efe2; --animal-accent: #f4efe2; }
+        .animal-bear .mark { display: block; left: 142px; top: 115px; width: 45px; height: 38px; background: #f4efe2; clip-path: polygon(0 0,50% 100%,100% 0,78% 0,50% 58%,22% 0); border-radius: 8px; transform: translateZ(22px); box-shadow: none; }
+        .animal-bear .tail { width: 22px; height: 16px; left: 58px; top: 126px; }
+
+        /* 無尾熊 樣式 */
+        .animal-koala { --animal-body: #8d9697; --animal-head: #90999b; --animal-belly: #e8e2d5; }
+        .animal-koala .ear { width: 48px; height: 48px; background: #9aa3a5; border: 8px solid #d9d5c8; top: 44px; }
+        .animal-koala .ear.l { left: 194px; }.animal-koala .ear.r { left: 250px; }
+        .animal-koala .nose { width: 34px; height: 30px; border-radius: 45%; background: #25211f; left: 252px; top: 96px; }
+        .animal-koala .tail { display: none; }
+        .animal-koala .branch { display: block; left: 42px; top: 52px; width: 20px; height: 150px; border-radius: 999px; background: #7d5a3b; transform: rotate(14deg) translateZ(-20px); box-shadow: none; }
+        .animal-koala .branch:before, .animal-koala .branch:after { content: ""; position: absolute; background: #79a86c; border-radius: 50% 0 50% 0; width: 34px; height: 22px; }
+        .animal-koala .branch:before { left: -24px; top: 24px; transform: rotate(-30deg); }.animal-koala .branch:after { left: 14px; top: 80px; transform: rotate(34deg); }
+
+        /* 大象 樣式 */
+        .animal-elephant { --animal-body: #777d80; --animal-head: #73797c; --animal-belly: #8e9496; }
+        .animal-elephant .body { width: 170px; height: 92px; left: 58px; top: 82px; }
+        .animal-elephant .head { width: 82px; height: 72px; left: 210px; top: 73px; }
+        .animal-elephant .ear { display: block; width: 60px; height: 66px; border-radius: 50%; background: #8d9395; top: 68px; }
+        .animal-elephant .ear.l { left: 200px; }.animal-elephant .ear.r { left: 242px; opacity: .75; }
+        .animal-elephant .trunk { display: block; left: 266px; top: 118px; width: 28px; height: 86px; border-radius: 16px; background: #73797c; transform: translateZ(32px) rotate(10deg); box-shadow: inset -8px -10px 0 rgba(0,0,0,.12); }
+        .animal-elephant .tusk { display: block; left: 254px; top: 130px; width: 44px; height: 8px; border-radius: 999px; background: #f5ead1; transform: translateZ(46px) rotate(16deg); box-shadow: none; }
+        .animal-elephant .nose { display: none; }
+        .animal-elephant .tail { width: 42px; height: 10px; top: 120px; left: 30px; }
+        .animal-elephant .leg { width: 36px; height: 60px; border-radius: 14px; background: #707679; }
+
+        /* 河馬 樣式 */
+        .animal-hippo { --animal-body: #7b7372; --animal-head: #817a79; --animal-belly: #9b9290; }
+        .animal-hippo .body { left: 54px; top: 94px; width: 180px; height: 82px; }
+        .animal-hippo .head { left: 216px; top: 83px; width: 86px; height: 74px; border-radius: 45%; }
+        .animal-hippo .muzzle { display: block; left: 248px; top: 113px; width: 64px; height: 42px; border-radius: 45%; background: #948a88; transform: translateZ(44px); box-shadow: inset -8px -8px 0 rgba(0,0,0,.10); }
+        .animal-hippo .ear { width: 20px; height: 20px; background: #817a79; top: 70px; }
+        .animal-hippo .ear.l { left: 224px; }.animal-hippo .ear.r { left: 272px; }
+        .animal-hippo .nose { left: 274px; top: 129px; width: 8px; height: 8px; }.animal-hippo .eye.l { left: 244px; }.animal-hippo .eye.r { left: 268px; }
+        .animal-hippo .tail { width: 20px; height: 10px; left: 42px; top: 132px; }
+        .animal-hippo .leg { height: 42px; width: 34px; top: 150px; }
+
+        /* 臺灣獼猴 樣式 */
+        .animal-macaque { --animal-body: #8a6b4e; --animal-head: #a67f5a; --animal-belly: #d6b58b; }
+        .animal-macaque .body { left: 88px; top: 92px; width: 132px; height: 78px; border-radius: 48%; }
+        .animal-macaque .head { left: 202px; top: 70px; width: 66px; height: 58px; background: #a67f5a; }
+        .animal-macaque .muzzle { display: block; left: 238px; top: 98px; width: 40px; height: 28px; border-radius: 50%; background: #d7b78f; transform: translateZ(42px); }
+        .animal-macaque .ear { width: 24px; height: 24px; background: #9b7455; top: 78px; }
+        .animal-macaque .ear.l { left: 196px; }.animal-macaque .ear.r { left: 250px; }
+        .animal-macaque .tail { left: 48px; top: 92px; width: 90px; height: 14px; border-radius: 999px; background: #8a6b4e; transform: rotate(-38deg) translateZ(-8px); }
+        .animal-macaque .leg { height: 48px; width: 26px; background: #7c5b41; }
+        .animal-macaque .nose { left: 254px; top: 105px; width: 18px; height: 12px; }
+
+        .control-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 8px 0 12px; }
+        .state-btn { border: 1px solid rgba(31,77,56,.15); border-radius: 14px; background: #fff; color: var(--forest); font-size:12px; font-weight: 900; padding: 9px; cursor: pointer; }
+        .state-btn.active { background: #eaf4e6; }
+        .scene-text { background: rgba(255,255,255,.76); border: 1px solid rgba(31,77,56,.09); border-radius: 20px; padding: 14px; }
+        .scene-text strong { display: block; color: var(--forest); font-size: 17px; line-height: 1.3; margin-bottom: 4px; }
+        .scene-text p { margin: 0; color: #526158; font-size: 13px; }
+        .cta-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 18px; }
+        .btn { appearance: none; border: 0; border-radius: 18px; padding: 14px 16px; font-weight: 800; font-size: 15px; cursor: pointer; text-decoration: none; display: flex; justify-content: center; align-items: center; gap: 8px; transition: transform .18s ease; }
+        .btn:active { transform: scale(.98); }
+        .btn.primary { background: linear-gradient(135deg, var(--forest), var(--forest2)); color: #fff; box-shadow: 0 12px 24px rgba(31,77,56,.22); }
+        .btn.secondary { color: var(--forest); background: #fff; border: 1px solid rgba(31,77,56,.14); box-shadow: 0 8px 18px rgba(31,77,56,.08); }
+        .notice { margin-top: 16px; border-radius: 20px; background: rgba(255,255,255,.7); border: 1px solid rgba(31,77,56,.12); padding: 13px 14px; color: #59675e; font-size: 13px; }
+        h2 { margin: 0 0 10px; color: var(--forest); font-size: 24px; letter-spacing: -.4px; line-height: 1.2; }
+        .section-lead { margin: 0 0 18px; color: var(--muted); font-size: 14px; }
+        .card { background: rgba(255,255,255,.78); border: 1px solid rgba(31,77,56,.1); border-radius: var(--radius); box-shadow: 0 12px 28px rgba(31,77,56,.08); padding: 16px; }
+        .timeline, .qa-buttons, .learning-grid, .safety-list, .poc-grid { display: grid; gap: 11px; margin-top: 14px; }
+        .time-card, .q-btn, .learn-card, .safety-item, .poc-item, .mini-action { background: #fff; border: 1px solid rgba(31,77,56,.1); border-radius: 18px; }
+        .time-card { padding: 14px; text-align: left; cursor: pointer; display: grid; gap: 4px; }
+        .time-card.active { border-color: rgba(31,77,56,.45); background: #f1f7ed; box-shadow: 0 10px 22px rgba(31,77,56,.12); }
+        .time-card .time { color: var(--gold); font-size: 12px; font-weight: 900; }
+        .time-card strong { color: var(--forest); font-size: 16px; }
+        .time-card span { color: #5f6b63; font-size: 13px; }
+        .q-btn { color: var(--forest); text-align: left; padding: 13px 14px; cursor: pointer; font-weight: 750; line-height: 1.45; }
+        .answer-box { border-radius: 22px; padding: 16px; background: linear-gradient(180deg, #f8fff4, #fffdf5); border: 1px solid rgba(31,77,56,.14); min-height: 150px; margin-top: 12px; }
+        .answer-box .label { color: var(--gold); font-size: 12px; font-weight: 900; margin-bottom: 8px; display: block; }
+        .answer-box p { margin: 0; color: #415046; font-size: 14px; }
+        .safe-note { margin-top: 10px; font-size: 12px; color: #6f6a5f; background: #fff4d5; border: 1px solid #efd99a; border-radius: 16px; padding: 10px 12px; }
+        .learn-card { padding: 14px; display: flex; gap: 11px; align-items: flex-start; }
+        .learn-icon { width: 34px; height: 34px; border-radius: 14px; background: #eef7ea; display: grid; place-items: center; flex: 0 0 auto; }
+        .learn-card p { margin: 0; color: #425148; font-size: 14px; }
+        .action-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+        .mini-action { padding: 12px; min-height: 70px; font-size: 13px; color: var(--forest); font-weight: 800; display: flex; align-items: center; justify-content: center; text-align: center; }
+        .safety-item { padding: 12px 12px 12px 46px; position: relative; color: #435148; font-size: 14px; }
+        .safety-item:before { content: attr(data-num); position: absolute; left: 12px; top: 12px; width: 24px; height: 24px; border-radius: 10px; background: var(--forest); color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 900; }
+        .poc-grid { grid-template-columns: 1fr; }
+        .poc-item { padding: 13px; color: #425148; font-size: 14px; display: flex; gap: 10px; align-items: flex-start; }
+        .poc-item b { color: var(--forest); }
+        .footer { padding: 34px 18px 42px; background: linear-gradient(180deg, rgba(31,77,56,.02), rgba(31,77,56,.12)); text-align: center; }
+        .footer h2 { font-size: 25px; margin-bottom: 12px; }
+        .footer p { margin: 0; color: #5f6b63; font-size: 13px; }
+        .signature { margin-top: 18px; padding: 13px; border-radius: 18px; background: rgba(255,255,255,.68); color: var(--forest); font-weight: 800; font-size: 13px; }
+        
+        @media (min-width: 520px) {
+            body { padding: 24px 0; }
+            .phone-shell { border-radius: 34px; box-shadow: 0 24px 80px rgba(31,77,56,.2); }
+            .cta-grid { grid-template-columns: 1fr 1fr 1fr; }
+            .btn { font-size: 13px; padding: 13px 10px; }
+            .animal-tabs { grid-template-columns: repeat(5, 1fr); gap: 4px; }
+            .poc-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <main class="phone-shell">
+        <nav class="topbar">
+            <div class="brand"><span class="brand-mark" id="brandIcon">熊</span>RememberMe Zoo PoC</div>
+            <div class="top-pill">多物種 3D</div>
+        </nav>
+        
+        <section class="hero">
+            <div class="eyebrow">智慧動物園 PoC｜多物種 3D 行為情境模型</div>
+            <h1 id="heroTitle">臺灣黑熊的一天</h1>
+            <p class="subtitle" id="heroSubtitle">透過 3D 行為模型、AI 保育知識庫與 QR Code 行動網頁互動，讓遊客理解動物的生活習性、棲地特徵與保育行動。</p>
+            
+            <div class="animal-tabs" id="animalTabs"></div>
+            
+            <div class="hero-card" id="model">
+                <div class="scene">
+                    <div class="scene-status">
+                        <div class="status-badge" id="stateBadge">10:30 上午｜巡行與探索</div>
+                        <div class="model-note">內建低多邊形 3D 示意｜正式版可替換 GLB 動畫模型</div>
+                    </div>
+                    <div class="stage-wrap" id="stageWrap">
+                        <div class="stage animal-bear state-walk" id="stage">
+                            <div class="ground"></div>
+                            <div class="branch part"></div>
+                            <div class="tail part"></div>
+                            <div class="body part"></div>
+                            <div class="belly part"></div>
+                            <div class="mark part"></div>
+                            <div class="ear l part"></div>
+                            <div class="ear r part"></div>
+                            <div class="head part"></div>
+                            <div class="muzzle part"></div>
+                            <div class="trunk part"></div>
+                            <div class="tusk part"></div>
+                            <div class="nose part"></div>
+                            <div class="eye l part"></div>
+                            <div class="eye r part"></div>
+                            <div class="leg l1 part"></div>
+                            <div class="leg l2 part"></div>
+                            <div class="leg l3 part"></div>
+                            <div class="leg l4 part"></div>
+                        </div>
+                    </div>
+                    <div class="control-row">
+                        <button class="state-btn active" data-state="walk">巡行</button>
+                        <button class="state-btn" data-state="stand">站立</button>
+                        <button class="state-btn" data-state="rest">休息</button>
+                    </div>
+                    <div class="scene-text">
+                        <strong id="sceneTitle">上午持續巡行與嗅聞環境</strong>
+                        <p id="sceneDesc">動物會在活動範圍內移動、觀察與尋找食物，這很適合轉化成孩子看得懂的互動教學。</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="cta-grid">
+                <a class="btn primary" href="#timeline">看牠的一天</a>
+                <a class="btn secondary" href="#qa">問牠保育問題</a>
+                <a class="btn secondary" href="#card">產生學習卡</a>
+            </div>
+            <div class="notice">本頁為多物種 3D 保育教育互動 PoC。此版不依賴 Sketchfab 或外部模型網站；正式合作時可替換為園方授權 GLB 模型與完整骨架動畫。畫面樣式、配色、互動流程與品牌識別，皆可依照動物園既有視覺標準與品牌調性進行調整。</div>
+        </section>
+        
+        <section>
+            <div class="card">
+                <h2>為什麼做多物種？</h2>
+                <p class="section-lead">同一套 AI 保育教育互動引擎，可以替不同物種建立「3D 模型 + 行為時間軸 + 問答知識庫 + 學習卡」模組，驗證未來擴展到多展區的可行性。</p>
+            </div>
+        </section>
+        
+        <section id="timeline">
+            <h2>24 小時行為觀察軸</h2>
+            <p class="section-lead" id="timelineLead">點擊不同時間，模型狀態與教育文案會一起切換。</p>
+            <div class="timeline" id="timelineList"></div>
+        </section>
+        
+        <section id="qa">
+            <h2>問牠保育問題</h2>
+            <p class="section-lead" id="qaLead">回答會依據保育知識庫產生，正式上線前可由園方審核。</p>
+            <div class="card">
+                <div class="qa-buttons" id="qaButtons"></div>
+                <div class="answer-box">
+                    <span class="label">AI 保育知識庫回答示意</span>
+                    <p id="answerText">請點選上方任一問題，查看 AI 保育問答示意。</p>
+                </div>
+                <div class="safe-note">AI 回答依據審核知識庫生成。正式上線前，所有對外內容皆可由園方審核。</div>
+            </div>
+        </section>
+        
+        <section id="card">
+            <h2>今日學到的事</h2>
+            <p class="section-lead">把參觀轉化成可帶走的保育學習成果，也能延伸至園方教育活動、動物認養或特展頁面。</p>
+            <div class="learning-grid" id="learningGrid"></div>
+            <div class="action-list">
+                <div class="mini-action">了解更多保育故事</div>
+                <div class="mini-action">參加園方教育活動</div>
+                <div class="mini-action">支持動物認養計畫</div>
+                <div class="mini-action">分享我的保育學習卡</div>
+            </div>
+        </section>
+        
+        <section>
+            <h2>內容安全機制</h2>
+            <p class="section-lead">降低公部門導入 AI 時最在意的錯誤回答、內容審核與教育一致性風險。</p>
+            <div class="safety-list">
+                <div class="safety-item" data-num="1">回答依據審核後的保育知識庫。</div>
+                <div class="safety-item" data-num="2">不提供危險互動或錯誤飼養建議。</div>
+                <div class="safety-item" data-num="3">不誤導動物習性與生物學事實。</div>
+                <div class="safety-item" data-num="4">不宣稱真實動物具有 AI 意識。</div>
+                <div class="safety-item" data-num="5">不取代園方正式解說與教育內容。</div>
+                <div class="safety-item" data-num="6">正式上線前，所有對外內容皆可由園方審核。</div>
+            </div>
+        </section>
+        
+        <section>
+            <h2>低風險 PoC 導入方式</h2>
+            <p class="section-lead">先從單一物種、單一展區、單一 QR Code 頁面開始，驗證教育互動成效。</p>
+            <div class="poc-grid">
+                <div class="poc-item">✅ <span><b>不需下載 App</b><br>遊客直接用手機瀏覽器開啟。</span></div>
+                <div class="poc-item">✅ <span><b>不需更動展區硬體</b><br>可先以 QR Code 立牌或現有看板貼紙測試。</span></div>
+                <div class="poc-item">✅ <span><b>不需串接園方內部系統</b><br>初期以獨立 PoC 頁面運作。</span></div>
+                <div class="poc-item">✅ <span><b>多物種可擴充</b><br>每個物種可獨立建立行為模型、知識庫與學習任務。</span></div>
+            </div>
+        </section>
+        
+        <footer class="footer">
+            <h2>從一隻動物，擴展成一座智慧動物園的互動入口。</h2>
+            <p>建立可審核、可展示、可驗證、可擴張的多物種保育教育互動系統。</p>
+            <p style="margin-top:10px;color:#6a756d;font-size:12px;">畫面樣式與設計可依照動物園標準進行調整，以符合園方品牌調性。</p>
+            <div class="signature">即興果匠科技有限公司｜RememberMe 保育教育互動系統</div>
+        </footer>
+    </main>
+
+    <script>
+        const animals = {
+            bear: {
+                icon: "熊", cls: "animal-bear", title: "臺灣黑熊的一天",
+                subtitle: "透過 3D 行為模型、AI 保育知識庫與 QR Code 行動網頁互動，讓遊客理解臺灣黑熊的生活習性、棲地特徵與保育行動。",
+                badge: "10:30 上午｜巡行與探索", sceneTitle: "上午持續巡行與嗅聞環境",
+                sceneDesc: "黑熊會在活動範圍內移動、觀察與尋找食物，這很適合轉化成孩子看得懂的互動教學。",
+                timeline: [
+                    ["06:00 清晨", "外出覓食", "黑熊常在清晨較活躍，尋找果實、植物嫩芽、昆蟲等食物。", "walk"],
+                    ["10:30 上午", "巡行與探索", "牠會在活動範圍內移動、嗅聞環境，尋找食物與安全路徑。", "walk"],
+                    ["13:00 中午", "休息時間", "中午較安靜時，多半在巢穴、樹洞或較隱蔽的地方休息。", "rest"],
+                    ["17:30 黃昏", "再次活動", "黃昏是黑熊再次活躍的時間，準備進行下一輪覓食。", "stand"],
+                    ["21:00 夜間", "回到棲地休息", "逐步回到較安全的休息區域，降低活動量。", "rest"]
+                ],
+                qa: [
+                    ["為什麼臺灣黑熊胸前有白色 V 字？", "臺灣黑熊最容易辨識的特徵，就是胸前明顯的白色 V 字形斑紋。這個特徵很適合做成教育展示中的物種辨識任務。"],
+                    ["臺灣黑熊吃什麼？", "臺灣黑熊是雜食性動物，會吃果實、樹根、昆蟲及小型動物，但仍以植物性食物居多。"],
+                    ["為什麼牠在清晨和黃昏比較活躍？", "清晨與黃昏通常是牠外出覓食的重要時段，透過時間軸可以幫助遊客理解牠的活動節奏。"],
+                    ["我們可以怎麼幫助臺灣黑熊？", "從理解牠的生活方式開始，支持森林棲地保護、正確保育知識與環境教育，都是重要行動。"]
+                ],
+                learn: ["我知道臺灣黑熊胸前有白色 V 字形斑紋。", "我知道牠常生活在森林地帶，活動範圍很大。", "我知道牠常在清晨與黃昏較活躍。", "我知道保護森林棲地，就是保護臺灣黑熊。"]
+            },
+            koala: {
+                icon: "熊", cls: "animal-koala", title: "無尾熊的一天",
+                subtitle: "以 3D 行為模型呈現休息、取食與攀爬等行為，讓親子遊客理解無尾熊的生活節奏與棲地需求。",
+                badge: "14:00 下午｜樹上休息", sceneTitle: "大部分時間都在樹上休息",
+                sceneDesc: "無尾熊很適合做成親子導覽，因為牠的休息、取食與樹棲生活方式辨識度高。",
+                timeline: [
+                    ["06:30 清晨", "短暫活動", "清晨可能開始移動或調整休息位置。", "walk"],
+                    ["10:00 上午", "樹上休息", "多數時間停留在樹上休息，降低能量消耗。", "rest"],
+                    ["14:00 下午", "安靜睡眠", "下午常是安靜休息狀態，適合解釋牠的低能量生活節奏。", "rest"],
+                    ["18:00 傍晚", "取食桉樹葉", "傍晚可展示取食與攀爬行為。", "stand"],
+                    ["22:00 夜間", "夜間活動", "夜間也可能出現移動與進食行為。", "walk"]
+                ],
+                qa: [
+                    ["為什麼無尾熊常常在睡覺？", "牠們需要長時間休息來節省能量，這也能幫助孩子理解動物行為不是一直動才有趣。"],
+                    ["無尾熊吃什麼？", "無尾熊主要與桉樹葉有密切關聯，正式內容可依園方資料審核後上線。"],
+                    ["為什麼牠適合做親子教育？", "牠的外型辨識度高，行為節奏清楚，適合轉化成休息、取食、樹棲生活等學習任務。"],
+                    ["我們可以怎麼理解牠的保育需求？", "從棲地、食物來源與人為環境變化開始理解，是保育教育的入口。"]
+                ],
+                learn: ["我知道無尾熊常在樹上休息。", "我知道牠的生活與樹木、食物來源密切相關。", "我知道動物不一定要一直動，休息也是重要行為。", "我知道棲地保護對樹棲動物很重要。"]
+            },
+            elephant: {
+                icon: "象", cls: "animal-elephant", title: "大象的一天",
+                subtitle: "以 3D 行為模型呈現行走、取食、用鼻探索與休息，讓遊客理解大型動物的行為與照養知識。",
+                badge: "09:00 上午｜行走與取食", sceneTitle: "用鼻子探索環境",
+                sceneDesc: "大象有明顯的鼻子、耳朵與大型身形，模型辨識度最高，很適合做第一批多物種示範。",
+                timeline: [
+                    ["07:30 清晨", "開始活動", "清晨開始移動、探索環境與尋找食物。", "walk"],
+                    ["09:00 上午", "行走與取食", "大象會大量移動與進食，適合做成互動觀察任務。", "walk"],
+                    ["12:30 中午", "降溫與休息", "中午可呈現休息、降溫或較低活動量。", "rest"],
+                    ["15:30 下午", "用鼻探索", "用鼻子觸碰、嗅聞與探索環境。", "stand"],
+                    ["18:30 傍晚", "回到休息區", "逐步降低活動量，準備休息。", "rest"]
+                ],
+                qa: [
+                    ["大象的鼻子可以做什麼？", "大象的鼻子可用來嗅聞、觸碰、取食與探索環境，是非常適合教育展示的行為特徵。"],
+                    ["為什麼大象需要很大的活動空間？", "大型動物有明顯的移動、探索與取食需求，這能延伸到棲地與照養教育。"],
+                    ["大象一天會做哪些事情？", "行走、取食、探索、休息與社群互動都可以成為行為時間軸的內容。"],
+                    ["為什麼大象適合做 3D 模型？", "牠的外型特徵非常明確，鼻子、耳朵與身形都容易被遊客辨識。"]
+                ],
+                learn: ["我知道大象會用鼻子探索環境。", "我知道大型動物需要足夠的活動空間。", "我知道行走、取食、休息都是重要行為。", "我知道 3D 模型可以幫助孩子觀察大型動物特徵。"]
+            },
+            hippo: {
+                icon: "河", cls: "animal-hippo", title: "河馬的一天",
+                subtitle: "以 3D 行為模型呈現水中休息、上岸活動與覓食情境，讓遊客理解河馬的生活環境與行為節奏。",
+                badge: "11:00 上午｜水中休息", sceneTitle: "多數時間在水邊或水中休息",
+                sceneDesc: "河馬的身形特徵很清楚，適合呈現水陸交界的動物行為情境。",
+                timeline: [
+                    ["08:00 上午", "水邊活動", "在水邊移動或調整位置。", "walk"],
+                    ["11:00 上午", "水中休息", "白天常以休息、降溫和保持水分為主。", "rest"],
+                    ["14:00 下午", "低活動量", "下午可呈現低活動量與環境觀察。", "rest"],
+                    ["17:30 黃昏", "準備活動", "黃昏開始提高活動量。", "stand"],
+                    ["20:00 夜間", "覓食情境", "夜間可延伸到覓食與活動路徑說明。", "walk"]
+                ],
+                qa: [
+                    ["為什麼河馬常在水裡？", "水邊與水中環境有助於牠休息、降溫與保護皮膚，這是很適合做成環境教育的內容。"],
+                    ["河馬看起來很慢，為什麼還需要注意安全？", "大型動物的力量與活動範圍都需要被尊重，展示時可以教育遊客保持安全距離。"],
+                    ["河馬白天和晚上行為一樣嗎？", "白天與夜間活動量可能不同，這正是時間軸互動可以說明的地方。"],
+                    ["河馬適合做什麼互動展示？", "水中休息、上岸移動、覓食與棲地環境都適合轉化成 3D 情境。"]
+                ],
+                learn: ["我知道河馬常與水邊環境有關。", "我知道白天休息也是重要行為。", "我知道大型動物需要保持安全距離。", "我知道水陸交界也是重要的棲地教育主題。"]
+            },
+            macaque: {
+                icon: "猴", cls: "animal-macaque", title: "臺灣獼猴的一天",
+                subtitle: "以 3D 行為模型呈現攀爬、覓食、社群互動與休息，讓遊客理解臺灣本土靈長類動物的行為。",
+                badge: "08:30 上午｜覓食與移動", sceneTitle: "上午開始覓食與移動",
+                sceneDesc: "臺灣獼猴適合延伸到本土物種、社群行為與人猴距離教育，是在地性很強的 PoC 選項。",
+                timeline: [
+                    ["06:30 清晨", "開始移動", "清晨開始從休息點移動，準備覓食。", "walk"],
+                    ["08:30 上午", "覓食與移動", "在活動範圍內尋找食物並移動。", "walk"],
+                    ["12:00 中午", "休息與理毛", "中午可呈現休息、整理毛髮或社群互動。", "rest"],
+                    ["15:30 下午", "社群互動", "下午可呈現群體互動與觀察。", "stand"],
+                    ["18:00 傍晚", "回到休息點", "傍晚逐步回到較安全的休息區域。", "rest"]
+                ],
+                qa: [
+                    ["臺灣獼猴為什麼適合做本土教育？", "牠是很容易連結臺灣自然環境與人類活動的本土物種，適合做行為觀察與人猴距離教育。"],
+                    ["看到獼猴可以餵食嗎？", "正式上線時可依園方規範清楚提醒：不餵食、不挑逗、不靠近，尊重野生動物。"],
+                    ["獼猴有哪些行為可以觀察？", "移動、覓食、理毛、休息與社群互動都能做成孩子看得懂的互動任務。"],
+                    ["為什麼要保持距離？", "保持距離可以保護遊客，也避免改變野生動物的自然行為。"]
+                ],
+                learn: ["我知道臺灣獼猴是很適合做本土自然教育的物種。", "我知道不能餵食或挑逗野生動物。", "我知道理毛、覓食、移動都是可觀察行為。", "我知道保持距離也是保育的一部分。"]
+            }
+        };
+
+        let current = "bear", currentState = "walk", rx = -10, ry = 18, scale = 1;
+        const stage = document.getElementById("stage"), tabs = document.getElementById("animalTabs");
+
+        Object.entries({bear:"臺灣黑熊", koala:"無尾熊", elephant:"大象", hippo:"河馬", macaque:"臺灣獼猴"}).forEach(([key, label]) => {
+            const b = document.createElement("button");
+            b.className = "animal-tab" + (key === "bear" ? " active" : "");
+            b.textContent = label;
+            b.onclick = () => setAnimal(key);
+            tabs.appendChild(b);
+        });
+
+        function setAnimal(key) {
+            current = key;
+            const a = animals[key];
+            document.querySelectorAll(".animal-tab").forEach((b, i) => b.classList.toggle("active", Object.keys(animals)[i] === key));
+            document.getElementById("brandIcon").textContent = a.icon;
+            document.getElementById("heroTitle").textContent = a.title;
+            document.getElementById("heroSubtitle").textContent = a.subtitle;
+            document.getElementById("stateBadge").textContent = a.badge;
+            document.getElementById("sceneTitle").textContent = a.sceneTitle;
+            document.getElementById("sceneDesc").textContent = a.sceneDesc;
+            stage.className = "stage " + a.cls + " state-walk";
+            currentState = "walk";
+            document.querySelectorAll(".state-btn").forEach(btn => btn.classList.toggle("active", btn.dataset.state === "walk"));
+            renderTimeline();
+            renderQA();
+            renderLearn();
+        }
+
+        function setState(state) {
+            currentState = state;
+            const a = animals[current];
+            stage.className = "stage " + a.cls + " state-" + state;
+            document.querySelectorAll(".state-btn").forEach(btn => btn.classList.toggle("active", btn.dataset.state === state));
+        }
+
+        document.querySelectorAll(".state-btn").forEach(btn => btn.onclick = () => setState(btn.dataset.state));
+
+        function renderTimeline() {
+            const box = document.getElementById("timelineList");
+            box.innerHTML = "";
+            animals[current].timeline.forEach((t, i) => {
+                const b = document.createElement("button");
+                b.className = "time-card" + (i === 1 ? " active" : "");
+                b.innerHTML = `<span class="time">${t[0]}</span><strong>${t[1]}</strong><span>${t[2]}</span>`;
+                b.onclick = () => {
+                    document.querySelectorAll(".time-card").forEach(x => x.classList.remove("active"));
+                    b.classList.add("active");
+                    document.getElementById("stateBadge").textContent = t[0] + "｜" + t[1];
+                    document.getElementById("sceneTitle").textContent = t[1];
+                    document.getElementById("sceneDesc").textContent = t[2];
+                    setState(t[3]);
+                };
+                box.appendChild(b);
+            });
+        }
+
+        function renderQA() {
+            const box = document.getElementById("qaButtons");
+            box.innerHTML = "";
+            document.getElementById("answerText").textContent = "請點選上方任一問題，查看 AI 保育問答示意。";
+            animals[current].qa.forEach(([q, a]) => {
+                const b = document.createElement("button");
+                b.className = "q-btn";
+                b.textContent = q;
+                b.onclick = () => {
+                    document.getElementById("answerText").textContent = a;
+                    document.querySelectorAll(".q-btn").forEach(x => x.style.background = "#fff");
+                    b.style.background = "#f1f7ed";
+                };
+                box.appendChild(b);
+            });
+        }
+
+        function renderLearn() {
+            const box = document.getElementById("learningGrid");
+            box.innerHTML = "";
+            animals[current].learn.forEach((txt, i) => {
+                const div = document.createElement("div");
+                div.className = "learn-card";
+                div.innerHTML = `<div class="learn-icon">${i + 1}</div><p>${txt}</p>`;
+                box.appendChild(div);
+            });
+        }
+
+        const wrap = document.getElementById("stageWrap");
+        let dragging = false, sx = 0, sy = 0, startRy = 0, startRx = 0;
+        wrap.addEventListener("pointerdown", e => { dragging = true; sx = e.clientX; sy = e.clientY; startRy = ry; startRx = rx; wrap.setPointerCapture(e.pointerId); });
+        wrap.addEventListener("pointermove", e => { if (!dragging) return; ry = startRy + (e.clientX - sx) * 0.45; rx = Math.max(-35, Math.min(25, startRx - (e.clientY - sy) *
